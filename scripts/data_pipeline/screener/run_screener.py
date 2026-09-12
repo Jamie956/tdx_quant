@@ -51,10 +51,8 @@ def _load(
     if cache_dir.exists():
         try:
             cached = pd.read_parquet(cache_dir)
-            # The indicator/condition layers assume time-ascending rows; ensure
-            # the cached frame is sorted even if it was written out of order.
-            if 'trade_date' in cached.columns:
-                cached = cached.sort_values('trade_date', ascending=True).reset_index(drop=True)
+            if 'datetime' in cached.columns:
+                cached = cached.sort_values('datetime', ascending=True).reset_index(drop=True)
             return ts_code, cached
         except Exception:
             # Corrupt / partial cache -> fall through to a fresh download.

@@ -5,32 +5,51 @@ import pandas as pd
 from scripts.data_pipeline.indicators.volume import calc_volume_ratio
 
 
+def _cross_above(fast: pd.Series, slow: pd.Series) -> pd.Series:
+    """Boolean Series: True on bars where ``fast`` crosses above ``slow``.
+
+    A bar is a cross iff the previous bar had ``fast <= slow`` and this bar has
+    ``fast > slow``. NaN anywhere in the involved values yields False for that
+    bar (``>``/``<=`` are False on NaN, so no explicit NaN guard is needed).
+    """
+    return (fast > slow) & (fast.shift(1) <= slow.shift(1))
+
+
+def golden_cross_series(df: pd.DataFrame) -> pd.Series:
+    """Boolean Series marking every bar where MACD DIF crosses above DEA.
+
+    Vectorized counterpart to :func:`golden_cross` — use this to locate the
+    historical dates of MACD golden crosses, not just the latest bar. Returns
+    an all-False Series (same index) when the required columns are missing.
+    """
+    if 'DIF' not in df.columns or 'DEA' not in df.columns:
+        return pd.Series(False, index=df.index)
+    return _cross_above(df['DIF'], df['DEA'])
+
+
+def kdj_golden_cross_series(df: pd.DataFrame) -> pd.Series:
+    """Boolean Series marking every bar where KDJ K crosses above D."""
+    if 'K' not in df.columns or 'D' not in df.columns:
+        return pd.Series(False, index=df.index)
+    return _cross_above(df['K'], df['D'])
+
+
 def golden_cross(df: pd.DataFrame) -> bool:
     """MACD golden cross on the latest bar: DIF crosses ABOVE DEA.
 
     True iff ``DIF[-1] > DEA[-1]`` and ``DIF[-2] <= DEA[-2]``. Returns False
     when there are fewer than two bars or any involved value is NaN.
     """
-    if 'DIF' not in df.columns or 'DEA' not in df.columns or len(df) < 2:
+    if len(df) < 2:
         return False
-    dif, dea = df['DIF'], df['DEA']
-    d0, e0 = dif.iloc[-1], dea.iloc[-1]
-    d1, e1 = dif.iloc[-2], dea.iloc[-2]
-    if pd.isna(d0) or pd.isna(e0) or pd.isna(d1) or pd.isna(e1):
-        return False
-    return bool(d0 > e0 and d1 <= e1)
+    return bool(golden_cross_series(df).iloc[-1])
 
 
 def kdj_golden_cross(df: pd.DataFrame) -> bool:
     """KDJ golden cross on the latest bar: K crosses ABOVE D."""
-    if 'K' not in df.columns or 'D' not in df.columns or len(df) < 2:
+    if len(df) < 2:
         return False
-    k, d = df['K'], df['D']
-    k0, d0 = k.iloc[-1], d.iloc[-1]
-    k1, d1 = k.iloc[-2], d.iloc[-2]
-    if pd.isna(k0) or pd.isna(d0) or pd.isna(k1) or pd.isna(d1):
-        return False
-    return bool(k0 > d0 and k1 <= d1)
+    return bool(kdj_golden_cross_series(df).iloc[-1])
 
 
 def volume_breakout(df: pd.DataFrame, n: int = 5, k: float = 2) -> bool:

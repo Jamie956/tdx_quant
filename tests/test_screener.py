@@ -292,6 +292,36 @@ def test_screen_uses_parquet_cache_instead_of_downloader(tmp_path) -> None:
     assert set(result['ts_code']) == {ts_code}
 
 
+def test_screen_sorts_minute_cache_by_datetime(tmp_path) -> None:
+    """Regression: a minute cache with many bars per trade_date must be re-sorted
+    chronologically (by the full ``datetime``), not left in write order. The
+    default sort_values quicksort is unstable, so sorting by date alone shuffles
+    same-date bars and corrupts order-sensitive indicators (MACD/KDJ/RSI)."""
+    n = 48
+    rng = np.random.default_rng(0)
+    close = 10 + np.cumsum(rng.normal(scale=0.05, size=n))
+    df = _frame(close)
+    df['trade_date'] = '20260911'
+    df['trade_time'] = [f'{9 + (i * 5) // 60:02d}:{(i * 5) % 60:02d}:00' for i in range(n)]
+    df['datetime'] = pd.to_datetime(df['trade_date'] + ' ' + df['trade_time'])
+    # Shuffle rows to break the intra-day order, then write the cache.
+    df = df.sample(frac=1.0, random_state=1).reset_index(drop=True)
+
+    cache_dir = tmp_path / 'minute_5m' / 'ts_code=000001.SZ'
+    cache_dir.mkdir(parents=True)
+    df.to_parquet(cache_dir / 'data.parquet')
+
+    seen: dict[str, bool] = {}
+
+    def _assert_chronological(ind: pd.DataFrame) -> bool:
+        seen['sorted'] = bool(ind['datetime'].is_monotonic_increasing)
+        return False
+
+    fake = _FakeDownloader({})  # only the 5m cache exists -> others raise & skip
+    screen(['000001'], [_assert_chronological], data_root=tmp_path, downloader=fake)
+    assert seen['sorted'] is True
+
+
 def test_screen_falls_back_to_download_when_cache_corrupt(tmp_path) -> None:
     ts_code = '000001.SZ'
     cache_dir = tmp_path / 'daily' / f'ts_code={ts_code}'
