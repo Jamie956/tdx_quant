@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager
 
 DEFAULT_HOSTS = (
-    ('default', '119.147.212.81', 7709),
+    ('default', '117.34.114.15', 7709),
     ('server_1', '115.238.56.198', 7709),
     ('server_2', '115.238.90.165', 7709),
     ('server_3', '180.153.18.170', 7709),
