@@ -10,12 +10,13 @@ from scripts.data_pipeline.screener.conditions import (
     hammer_series,
     kdj_golden_cross_series,
 )
+from scripts.data_pipeline.signals import trend_snapshot
 
 df = pd.read_parquet('data/daily/ts_code=601088.SH/data.parquet')
 df = df.sort_values('trade_date').reset_index(drop=True)
 
 # 先在全量上算指标（MACD/KDJ 是递推 EMA，切片后再算会缺 warmup），
-# 最后再按日期筛出最近 6 个月的交叉点。
+# 最后再按日期筛出最近 12 个月的交叉点。
 ind = compute_all(df, timeframe='daily')
 
 cutoff = (
@@ -28,6 +29,9 @@ macd_cross = golden_cross_series(ind)
 kdj_cross  = kdj_golden_cross_series(ind)
 hammer     = hammer_series(ind)
 
+print('趋势判断：')
+print(trend_snapshot(df).to_string())
+print()
 print('MACD 金叉（截止', ind['trade_date'].max(), '）')
 print(ind[macd_cross & recent][['trade_date', 'close', 'DIF', 'DEA']])
 print('KDJ 金叉')

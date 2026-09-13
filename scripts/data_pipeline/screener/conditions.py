@@ -132,6 +132,24 @@ def hammer(
     )
 
 
+def uptrend(df: pd.DataFrame, *, slope_bars: int = 5) -> bool:
+    """Latest bar is in a medium-term uptrend: close above MA20 and MA20 rising."""
+    if 'close' not in df.columns or 'MA20' not in df.columns or len(df) < slope_bars + 1:
+        return False
+    close, ma20 = df['close'].iloc[-1], df['MA20'].iloc[-1]
+    slope = ma20 - df['MA20'].iloc[-1 - slope_bars]
+    return bool(close > ma20 and slope > 0)
+
+
+def downtrend(df: pd.DataFrame, *, slope_bars: int = 5) -> bool:
+    """Latest bar is in a medium-term downtrend: close below MA20 and MA20 falling."""
+    if 'close' not in df.columns or 'MA20' not in df.columns or len(df) < slope_bars + 1:
+        return False
+    close, ma20 = df['close'].iloc[-1], df['MA20'].iloc[-1]
+    slope = ma20 - df['MA20'].iloc[-1 - slope_bars]
+    return bool(close < ma20 and slope < 0)
+
+
 # Registry mapping CLI names to the condition callables.
 CONDITIONS = {
     'golden_cross': golden_cross,
@@ -140,4 +158,6 @@ CONDITIONS = {
     'rsi_oversold': rsi_oversold,
     'near_boll_lower': near_boll_lower,
     'hammer': hammer,
+    'uptrend': uptrend,
+    'downtrend': downtrend,
 }

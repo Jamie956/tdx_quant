@@ -7,12 +7,14 @@ import pytest
 from scripts.data_pipeline.indicators import compute_all
 from scripts.data_pipeline.screener.conditions import (
     CONDITIONS,
+    downtrend,
     golden_cross,
     hammer,
     hammer_series,
     kdj_golden_cross,
     near_boll_lower,
     rsi_oversold,
+    uptrend,
     volume_breakout,
 )
 from scripts.data_pipeline.screener.run_screener import screen
@@ -208,6 +210,21 @@ def test_hammer_series_false_on_normal_candle() -> None:
 
 
 # ---------------------------------------------------------------------------
+# uptrend / downtrend
+# ---------------------------------------------------------------------------
+def test_uptrend_true_on_rising_close_above_ma20() -> None:
+    ind = compute_all(_frame(np.linspace(10.0, 30.0, 120)))
+    assert uptrend(ind) is True
+    assert downtrend(ind) is False
+
+
+def test_downtrend_true_on_falling_close_below_ma20() -> None:
+    ind = compute_all(_frame(np.linspace(30.0, 10.0, 120)))
+    assert downtrend(ind) is True
+    assert uptrend(ind) is False
+
+
+# ---------------------------------------------------------------------------
 # cross-day behaviour
 # ---------------------------------------------------------------------------
 def test_golden_cross_appears_only_on_cross_day() -> None:
@@ -227,7 +244,7 @@ def test_golden_cross_appears_only_on_cross_day() -> None:
 def test_conditions_registry_complete() -> None:
     assert set(CONDITIONS) == {
         'golden_cross', 'kdj_golden_cross', 'volume_breakout',
-        'rsi_oversold', 'near_boll_lower', 'hammer',
+        'rsi_oversold', 'near_boll_lower', 'hammer', 'uptrend', 'downtrend',
     }
     for name, fn in CONDITIONS.items():
         assert callable(fn)
