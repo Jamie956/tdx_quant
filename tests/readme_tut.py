@@ -4,10 +4,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # ============================== 1. 下载：tdx_client.TdxDownloader
-# from pathlib import Path
-# from scripts.data_pipeline.tdx_client import TdxDownloader
+from pathlib import Path
+from scripts.data_pipeline.tdx_client import TdxDownloader
 
-# dl = TdxDownloader(Path("data"))
+dl = TdxDownloader(Path("data"))
 
 # daily   = dl.download_daily("000001")          # 日K全历史(自动翻页),落盘并返回
 # minute  = dl.download_minute("000001", freq=5) # 5分钟线,带 trade_time 列
@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # xdxr    = dl.download_xdxr("000001")           # 除权除息
 # snap    = dl.snapshot("000001")                # 实时快照(hq); snapshot("AAPL") 走 exhq
 # print(snap)
-
+dl.download_daily("601088")
 
 # sec   = dl.download_security_list(0)               # 全市场枚举快照(0=SZ / 1=SH)
 # idx   = dl.download_index("000001", market=1)      # 指数 K 线；market 必须显式传(000001=上证指数,SH)
@@ -59,18 +59,18 @@ sys.path.append(str(Path(__file__).parent.parent))
 # print(ind)
 
 # ============================== 3. 选股：screener
-from scripts.data_pipeline.screener.run_screener import screen
-from scripts.data_pipeline.screener.conditions import golden_cross, rsi_oversold, kdj_golden_cross, near_boll_lower
+# from scripts.data_pipeline.screener.run_screener import screen
+# from scripts.data_pipeline.screener.conditions import golden_cross, rsi_oversold, kdj_golden_cross, near_boll_lower
 
-result = screen(
-    ["000001"],
-    [golden_cross, rsi_oversold, kdj_golden_cross, near_boll_lower],
-    data_root="data",
-    max_bars=200,          # 每个周期最多取的 K 线根数，特殊情况调大
-)
-# 列: ts_code, timeframe, close, hit_count, matched, latest_trade_date
-# 每个 (股票, 周期) 一行；按 hit_count 降序
-print(result)
+# result = screen(
+#     ["000001"],
+#     [golden_cross, rsi_oversold, kdj_golden_cross, near_boll_lower],
+#     data_root="data",
+#     max_bars=200,          # 每个周期最多取的 K 线根数，特殊情况调大
+# )
+# # 列: ts_code, timeframe, close, hit_count, matched, latest_trade_date
+# # 每个 (股票, 周期) 一行；按 hit_count 降序
+# print(result)
 
 
 # ============================== 5. 通达信 MCP（实时概念/资金/涨停数据）

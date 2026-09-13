@@ -89,6 +89,49 @@ def near_boll_lower(df: pd.DataFrame) -> bool:
     return bool(close <= dn)
 
 
+def hammer_series(
+    df: pd.DataFrame,
+    *,
+    lower_body_ratio: float = 2.0,
+    upper_body_ratio: float = 1.0,
+) -> pd.Series:
+    """Boolean Series marking hammer candles (锤头线 / 下锤线).
+
+    A hammer has a long lower shadow (>= ``lower_body_ratio`` × the real body)
+    and a small upper shadow (<= ``upper_body_ratio`` × the real body), i.e. the
+    body sits near the top of the candle — a bullish-reversal signal after a
+    decline. Requires OHLC columns; returns an all-False Series otherwise.
+    """
+    if not {'open', 'high', 'low', 'close'}.issubset(df.columns):
+        return pd.Series(False, index=df.index)
+    body = (df['close'] - df['open']).abs()
+    lower_shadow = df[['open', 'close']].min(axis=1) - df['low']
+    upper_shadow = df['high'] - df[['open', 'close']].max(axis=1)
+    return (
+        (lower_shadow >= lower_body_ratio * body)
+        & (upper_shadow <= upper_body_ratio * body)
+        & (lower_shadow > 0)
+    )
+
+
+def hammer(
+    df: pd.DataFrame,
+    *,
+    lower_body_ratio: float = 2.0,
+    upper_body_ratio: float = 1.0,
+) -> bool:
+    """Latest bar is a hammer (锤头线): long lower shadow, small upper shadow."""
+    if len(df) == 0:
+        return False
+    return bool(
+        hammer_series(
+            df,
+            lower_body_ratio=lower_body_ratio,
+            upper_body_ratio=upper_body_ratio,
+        ).iloc[-1]
+    )
+
+
 # Registry mapping CLI names to the condition callables.
 CONDITIONS = {
     'golden_cross': golden_cross,
@@ -96,4 +139,5 @@ CONDITIONS = {
     'volume_breakout': volume_breakout,
     'rsi_oversold': rsi_oversold,
     'near_boll_lower': near_boll_lower,
+    'hammer': hammer,
 }

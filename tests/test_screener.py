@@ -8,6 +8,8 @@ from scripts.data_pipeline.indicators import compute_all
 from scripts.data_pipeline.screener.conditions import (
     CONDITIONS,
     golden_cross,
+    hammer,
+    hammer_series,
     kdj_golden_cross,
     near_boll_lower,
     rsi_oversold,
@@ -181,6 +183,31 @@ def test_near_boll_lower_false_when_above_band() -> None:
 
 
 # ---------------------------------------------------------------------------
+# hammer (锤头线)
+# ---------------------------------------------------------------------------
+def test_hammer_series_true_on_long_lower_shadow() -> None:
+    df = pd.DataFrame({
+        'open':  [10.0],
+        'high':  [10.3],
+        'low':   [9.0],
+        'close': [10.2],
+    })
+    assert hammer_series(df).iloc[0]
+    assert hammer(df) is True
+
+
+def test_hammer_series_false_on_normal_candle() -> None:
+    df = pd.DataFrame({
+        'open':  [10.0],
+        'high':  [10.3],
+        'low':   [9.9],
+        'close': [10.2],
+    })
+    assert not hammer_series(df).iloc[0]
+    assert hammer(df) is False
+
+
+# ---------------------------------------------------------------------------
 # cross-day behaviour
 # ---------------------------------------------------------------------------
 def test_golden_cross_appears_only_on_cross_day() -> None:
@@ -200,7 +227,7 @@ def test_golden_cross_appears_only_on_cross_day() -> None:
 def test_conditions_registry_complete() -> None:
     assert set(CONDITIONS) == {
         'golden_cross', 'kdj_golden_cross', 'volume_breakout',
-        'rsi_oversold', 'near_boll_lower',
+        'rsi_oversold', 'near_boll_lower', 'hammer',
     }
     for name, fn in CONDITIONS.items():
         assert callable(fn)
