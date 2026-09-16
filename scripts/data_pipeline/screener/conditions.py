@@ -27,6 +27,17 @@ def golden_cross_series(df: pd.DataFrame) -> pd.Series:
     return _cross_above(df['DIF'], df['DEA'])
 
 
+def death_cross_series(df: pd.DataFrame) -> pd.Series:
+    """Boolean Series marking every bar where MACD DIF crosses below DEA.
+
+    Vectorized counterpart to :func:`golden_cross_series` (the opposite
+    direction: DIF falls back below DEA).
+    """
+    if 'DIF' not in df.columns or 'DEA' not in df.columns:
+        return pd.Series(False, index=df.index)
+    return _cross_above(df['DEA'], df['DIF'])
+
+
 def kdj_golden_cross_series(df: pd.DataFrame) -> pd.Series:
     """Boolean Series marking every bar where KDJ K crosses above D."""
     if 'K' not in df.columns or 'D' not in df.columns:
