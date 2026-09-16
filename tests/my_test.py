@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 # 加载项目根目录的.env
 load_dotenv() 
 
+import sys
+project_root = Path(__vsc_ipynb_file__).parent.parent
+sys.path.append(str(project_root))
+
 # %% ======================= bark notification =======================
 import requests
 import os
@@ -121,3 +125,73 @@ print(result.to_dicts())                     # list[dict]，字段名 → 值
 # 自动翻页（合并多页，最多 max_pages 页）
 result_all = client.query_all("DeepSeek概念板块成分股", page_size=50, max_pages=20)
 
+# %% ======================= 可视化：收益率（Plotly） =======================
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from scripts.data_pipeline.adjust import forward_adjust
+import plotly.io as pio
+
+
+code = "000001"
+daily = pd.read_parquet(f'../data/daily/ts_code={code}.SZ/data.parquet')
+xdxr  = pd.read_parquet(f'../data/xdxr/ts_code={code}.SZ/data.parquet')
+
+# 关键：用「前复权价」算收益，否则除权除息会在价格上制造假跳空，收益算出来是错的
+adj = forward_adjust(daily, xdxr).sort_values('trade_date').reset_index(drop=True)
+adj['ret'] = adj['close'].pct_change()                  # 日收益率
+adj['cum'] = (1 + adj['ret'].fillna(0)).cumprod() - 1   # 累计收益率
+
+ACCENT = "#2563eb"   # 单一主色（顺序编码 = 一个色相由浅到深）
+MUTED  = "#64748b"
+
+fig = make_subplots(
+    rows=2, cols=1, shared_xaxes=True,
+    row_heights=[0.7, 0.3], vertical_spacing=0.04,
+    subplot_titles=(f"{code} 累计收益率", "日收益率"),
+)
+
+fig.add_trace(
+    go.Scatter(x=adj['datetime'], y=adj['cum'], name="累计收益",
+               line=dict(color=ACCENT, width=2),
+               fill='tozeroy', fillcolor="rgba(37,99,235,0.12)",
+               hovertemplate="%{x|%Y-%m-%d}<br>累计收益 %{y:.2%}<extra></extra>"),
+    row=1, col=1,
+)
+fig.add_trace(
+    go.Bar(x=adj['datetime'], y=adj['ret'], name="日收益",
+           marker_color=MUTED, marker_line_width=0,
+           hovertemplate="%{x|%Y-%m-%d}<br>日收益 %{y:.2%}<extra></extra>"),
+    row=2, col=1,
+)
+
+fig.update_layout(
+    template="plotly_white",   # 深色换 "plotly_dark"
+    height=640, showlegend=False, hovermode="x",
+    margin=dict(l=8, r=8, t=40, b=8),
+)
+fig.update_yaxes(tickformat=".0%", row=1, col=1)
+fig.update_yaxes(tickformat=".1%", row=2, col=1)
+fig.update_xaxes(showgrid=False)
+fig.update_yaxes(gridcolor="rgba(100,116,139,0.15)",
+                 zeroline=True, zerolinecolor="rgba(100,116,139,0.35)")
+
+# 浏览器打开图表
+pio.renderers.default = "browser"
+fig.show()
+
+# 顺带：K 线（A股习惯：红涨绿跌）
+fig_k = go.Figure(go.Candlestick(
+    x=adj['datetime'], open=adj['open'], high=adj['high'],
+    low=adj['low'], close=adj['close'],
+    increasing_line_color="#d92d20", decreasing_line_color="#0ca678",
+))
+fig_k.update_layout(template="plotly_white", height=520, xaxis_rangeslider_visible=False)
+fig_k.show()
+
+# 导出（可选）
+# fig.write_html("returns.html")   # 交互式，可直接发人
+# fig.write_image("returns.png")   # 静态图（需 pip install kaleido）
+
+
+# %%
