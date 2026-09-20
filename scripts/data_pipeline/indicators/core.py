@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from scripts.data_pipeline.indicators.momentum import calc_kdj, calc_rsi
+from scripts.data_pipeline.indicators.regression import calc_rsrs
 from scripts.data_pipeline.indicators.trend import calc_ema, calc_ma, calc_macd
 from scripts.data_pipeline.indicators.volatility import calc_atr, calc_boll
 from scripts.data_pipeline.indicators.volume import (
@@ -20,6 +21,7 @@ INDICATORS = {
     'macd': calc_macd,
     'rsi': calc_rsi,
     'kdj': calc_kdj,
+    'rsrs': calc_rsrs,
     'boll': calc_boll,
     'atr': calc_atr,
     'vol_ma': calc_vol_ma,
@@ -36,6 +38,7 @@ DAILY_CONFIG = {
     'macd': {'fast': 12, 'slow': 26, 'signal': 9},
     'rsi': {'periods': (6, 12, 24)},
     'kdj': {'n': 9, 'm1': 3, 'm2': 3},
+    'rsrs': {'n': 18, 'm': 1100},
     'boll': {'n': 20, 'k': 2},
     'atr': {'n': 14},
     'vol_ma': {'periods': (5, 10)},
@@ -48,6 +51,7 @@ MINUTE_CONFIG = {
     'macd': {'fast': 12, 'slow': 26, 'signal': 9},
     'rsi': {'periods': (6, 12)},
     'kdj': {'n': 9, 'm1': 3, 'm2': 3},
+    'rsrs': {'n': 18, 'm': 250},
     'boll': {'n': 20, 'k': 2},
     'atr': {'n': 14},
     'vol_ma': {'periods': (5, 10)},

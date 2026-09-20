@@ -108,7 +108,7 @@ def test_compute_all_turnover_with_shares() -> None:
 
 def test_indicators_registry_maps_all_names() -> None:
     assert set(INDICATORS.keys()) == {
-        'ma', 'ema', 'macd', 'rsi', 'kdj', 'boll', 'atr',
+        'ma', 'ema', 'macd', 'rsi', 'kdj', 'rsrs', 'boll', 'atr',
         'vol_ma', 'vol_ratio', 'turnover',
     }
     for name, func in INDICATORS.items():

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts.data_pipeline.indicators.momentum import calc_kdj, calc_rsi
+from scripts.data_pipeline.indicators.regression import calc_rsrs
 from scripts.data_pipeline.indicators.trend import calc_ema, calc_ma, calc_macd
 from scripts.data_pipeline.indicators.volatility import calc_atr, calc_boll
 from scripts.data_pipeline.indicators.core import INDICATORS, compute_all
@@ -16,6 +17,7 @@ __all__ = [
     'calc_macd',
     'calc_rsi',
     'calc_kdj',
+    'calc_rsrs',
     'calc_boll',
     'calc_atr',
     'calc_vol_ma',

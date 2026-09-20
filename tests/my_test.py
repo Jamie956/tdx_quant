@@ -4,7 +4,7 @@ os.chdir(Path(__vsc_ipynb_file__).parent)
 
 from dotenv import load_dotenv
 # 加载项目根目录的.env
-load_dotenv() 
+load_dotenv()
 
 import sys
 project_root = Path(__vsc_ipynb_file__).parent.parent
@@ -72,8 +72,7 @@ from scripts.data_pipeline.tdx_client import TdxDownloader
 
 dl = TdxDownloader(Path("../data"))
 
-daily   = dl.download_daily("000001")          # 日K全历史(自动翻页),落盘并返回
-print(daily)
+# daily   = dl.download_daily("000001")          # 日K全历史(自动翻页),落盘并返回
 # minute  = dl.download_minute("000001", freq=5) # 5分钟线,带 trade_time 列
 # dl.download_minute("000001", freq=15)
 # dl.download_minute("000001", freq=30)
@@ -81,6 +80,8 @@ print(daily)
 # xdxr    = dl.download_xdxr("000001")           # 除权除息
 # snap    = dl.snapshot("000001")                # 实时快照(hq); snapshot("AAPL") 走 exhq
 # print(snap)
+# 下载沪深300历史日 K
+dl.download_index("000300", market=1)
 
 # sec   = dl.download_security_list(0)               # 全市场枚举快照(0=SZ / 1=SH)
 # idx   = dl.download_index("000001", market=1)      # 指数 K 线；market 必须显式传(000001=上证指数,SH)
@@ -97,8 +98,11 @@ import pandas as pd
 
 pd.set_option('display.max_columns', None)
 
-df = pd.read_parquet('../data/daily/ts_code=601088.SH/data.parquet').sort_values('trade_date').reset_index(drop=True)
-ind = compute_all(df, timeframe="daily", shares=1e9)  # shares 可选,用于换手率
+# df = pd.read_parquet('../data/daily/ts_code=601088.SH/data.parquet').sort_values('trade_date').reset_index(drop=True)
+df = pd.read_parquet('../data/index_daily/ts_code=000300.SH/data.parquet').sort_values('trade_date').reset_index(drop=True)
+ind = compute_all(df, timeframe="daily", shares=1e9)
+# 保存计算结果
+# ind.to_parquet('data/000300.SH_indicators.parquet', index=False)
 print(ind)
 
 # %% ======================= 3. 选股：screener =======================

@@ -28,6 +28,7 @@ scripts/data_pipeline/
 │   ├── momentum.py               # RSI / KDJ
 │   ├── volatility.py             # BOLL / ATR
 │   ├── volume.py                 # VOL_MA / 量比 / 换手率近似
+│   ├── regression.py             # RSRS 择时
 │   └── core.py                   # INDICATORS 注册表 + compute_all
 └── screener/
     ├── conditions.py             # 金叉/突破/超卖 等声明式条件 + CONDITIONS
@@ -141,6 +142,7 @@ ind = compute_all(daily, timeframe="daily", shares=1e9)  # shares 可选,用于�
 | 动量 | `calc_rsi` / `calc_kdj` | `RSI6/12/24`、`K/D/J` |
 | 波动 | `calc_boll` / `calc_atr` | `BOLL_MB/BOLL_UP/BOLL_DN`、`ATR` |
 | 量能 | `calc_vol_ma` / `calc_volume_ratio` / `calc_turnover` | `VOL_MA5/10`、`VOL_RATIO`、`TURNOVER_RATE` |
+| 择时 | `calc_rsrs` | `RSRS_BETA`、`RSRS_R2`、`RSRS`、`RSRS_RIGHTDEV` |
 
 - `timeframe="minute"` 使用更短周期（去掉 MA60 / RSI24）。
 - 通达信约定：EMA 全程 `adjust=False`、MACD 柱 `(DIF-DEA)*2`、BOLL 总体标准差(`ddof=0`)、RSI/ATR Wilder 平滑。
@@ -367,6 +369,64 @@ python -m scripts.tdx_mcp.tdx_data_enricher --all
 
 ---
 
+## 6. 本地回测框架（聚宽式）
+
+`scripts/data_pipeline/strategy/` 是一个单标的·日线的事件驱动回测框架，把聚宽那套平台样板（调度、下单、持仓核算、数据切片、绩效）封装好，策略只需写信号逻辑。数据来自本项目已下载的 parquet。
+
+### 写策略（聚宽风格 API）
+
+```python
+from scripts.data_pipeline.strategy import (
+    g, set_option, set_benchmark, set_order_cost, OrderCost, run_daily,
+    get_price, attribute_history, order_target, order_target_value, run_strategy,
+)
+
+def initialize(context):
+    set_option('use_real_price', True)          # True=不复权 / False=前复权
+    set_benchmark('000300.SH')
+    set_order_cost(OrderCost(close_tax=0.001, open_commission=0.0003,
+                             close_commission=0.0003, min_commission=5))
+    g.N = 18                                    # 持久全局状态（聚宽 g 的等价）
+    run_daily(market_open, time='open', reference_security='000300.SH')
+
+def market_open(context):
+    prices = attribute_history(context.security, g.N, '1d', ['high', 'low'])
+    ...                                          # 算信号
+    order_target_value(context.security, context.portfolio.total_value)  # 全仓
+    # order_target(context.security, 0)          # 空仓
+
+result = run_strategy(initialize, security='000300.SH', fill_price='open')
+print(result.summary())
+```
+
+### 公开 API
+
+| 类别 | 函数 |
+|------|------|
+| 初始化期 | `set_option` / `set_benchmark` / `set_order_cost` / `run_daily(func, time='before_open'\|'open'\|'after_close')` |
+| 运行期 | `get_price(sec, start, end, '1d', fields)` / `attribute_history(sec, count, '1d', fields)` / `order` / `order_value` / `order_target` / `order_target_value` |
+| 状态 | `g`（全局命名空间）、`context.portfolio` / `current_dt` / `previous_date` / `security` |
+
+### 执行语义
+
+- **无未来函数**：第 T 天回调只能看到 ≤ T-1 的数据（`attribute_history` 截止 `previous_date`）。
+- **成交价**：`fill_price='open'`（默认）按 T 日开盘价、`'close'` 按 T 日收盘价成交。
+- **下单**：`order_target` 按差额、买入按 100 股整手取整；T+1（当日买入次日可卖，`t_plus_1=False` 可关）；开/平仓佣金 + 印花税（仅个股）+ 最低佣金。
+- **数据**：`security` 先查 `data/daily/`（个股），再查 `data/index_daily/`（指数）；个股有 `xdxr/` 时按 `set_option('use_real_price')` 决定是否前复权。代码接受 `000300.SH` / `000300` / `000300.XSHG`。
+- **结果**：`BacktestResult`（`equity`/`benchmark`/`trades`/`metrics`/`summary()`），复用 `backtest.py` 的绩效计算。
+
+### 示例
+
+```bash
+python examples/rsrs_timing.py    # RSRS 择时（tests/rsrs.py 的择时部分），输出 summary + 净值 CSV
+```
+
+### 边界（v1）
+
+仅日线、单标的、只做多（`order_target` 负值拒绝）；无 `get_fundamentals`（横截面基本面数据本地缺失）、无滑点/限价单、`send_message` 仅落日志。
+
+---
+
 ## 测试
 
 ```bash
@@ -381,3 +441,4 @@ python -m pytest tests/ -q
 - `tests/test_screener.py` / `test_screener_cli.py`：合成信号、缓存命中、坏票容错、CLI。
 - `tests/test_tdx_client_integration.py`：真实下载 `000001` 等，验证 ts_code / parquet 回读 / trade_time。
 - `tests/test_pytdx_extended_integration.py`：扩展接口（tick / 分时 / 股本结构 / F10 财务 / 指数 / 枚举）的实盘端到端测试。
+- `tests/test_strategy_*.py`：本地回测框架（下单核算 / 数据切片 / 引擎端到端 / RSRS 示例）。
