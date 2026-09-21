@@ -24,10 +24,6 @@ from scripts.data_pipeline.strategy import (
     set_option,
     set_order_cost,
 )
-from scripts.data_pipeline.strategy.plot import plot_equity
-
-CAPITAL = 1_000_000.0   # 初始资金
-
 
 def _ols(high, low):
     """一元 OLS：high ~ low 的斜率 beta 与 R2（等价 statsmodels.OLS，纯 numpy）。"""
@@ -131,17 +127,11 @@ def initialize(context):
     run_daily(before_market_open, time='before_open', reference_security='000300.SH')
     run_daily(market_open, time='open', reference_security='000300.SH')
 
-
 def main() -> None:
     result = run_strategy(
         initialize, security='000300.SH',
-        start='2015-01-01', fill_price='open',
-        initial_capital=CAPITAL
+        start='2015-01-01', fill_price='open'
     )
-    print(result.summary())
-
-
-    plot_equity(result, initial_capital=CAPITAL, summary=result.summary())
 
 
 if __name__ == '__main__':

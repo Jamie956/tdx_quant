@@ -17,6 +17,9 @@ from scripts.data_pipeline.strategy.context import (
     execute_order,
 )
 
+from scripts.data_pipeline.strategy.plot import plot_equity
+
+
 _SUFFIX_MAP = {'.XSHG': '.SH', '.XSHE': '.SZ'}
 
 
@@ -313,4 +316,6 @@ def run_strategy(
     trades = _pair_trades(fills, date_pos)
     metrics = _metrics(equity, benchmark_series, strat_ret, trades, initial_capital)
 
-    return BacktestResult(equity=equity, benchmark=benchmark_series, trades=trades, metrics=metrics)
+    result = BacktestResult(equity=equity, benchmark=benchmark_series, trades=trades, metrics=metrics)
+    plot_equity(result, initial_capital=initial_capital, summary=result.summary())
+    return result
